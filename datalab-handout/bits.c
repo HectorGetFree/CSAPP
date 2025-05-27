@@ -222,8 +222,10 @@ int conditional(int x, int y, int z) {
  *   Max ops: 24
  *   Rating: 3
  */
-int isLessOrEqual(int x, int y) {
-  return 2;
+int isLessOrEqual(int x, int y) {   
+  	int x_31 = (x >> 31) + 1;
+   	int y_31 = (y >> 31) + 1;
+	return ((!x_31) & y_31) | (!(x_31 ^ y_31) & !(((x + ~y) >> 31) + 1));
 }
 //4
 /* 
