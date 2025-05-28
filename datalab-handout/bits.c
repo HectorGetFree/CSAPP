@@ -143,7 +143,7 @@ NOTES:
  *   Rating: 1
  */
 int bitXor(int x, int y) {
-  return 2;
+  	return ~(x & y) & ~(~x & ~y);
 }
 /* 
  * tmin - return minimum two's complement integer 
@@ -152,8 +152,7 @@ int bitXor(int x, int y) {
  *   Rating: 1
  */
 int tmin(void) {
-
-  return 2;
+  return 1 << 31;
 
 }
 //2
@@ -165,7 +164,7 @@ int tmin(void) {
  *   Rating: 1
  */
 int isTmax(int x) {
-  return 2;
+	return !!(!(x + 1 + x + 1) & !!(x + 1));
 }
 /* 
  * allOddBits - return 1 if all odd-numbered bits in word set to 1
@@ -176,7 +175,8 @@ int isTmax(int x) {
  *   Rating: 2
  */
 int allOddBits(int x) {
-  return 2;
+	int v = 0b10101010;
+	return (0b01010101 + ((v & x & (x >> 8) & (x >> 16) & (x >> 24)) + 1)) >> 8;
 }
 /* 
  * negate - return -x 
@@ -186,7 +186,7 @@ int allOddBits(int x) {
  *   Rating: 2
  */
 int negate(int x) {
-  return 2;
+	return ~x + 1;
 }
 //3
 /* 
@@ -199,7 +199,10 @@ int negate(int x) {
  *   Rating: 3
  */
 int isAsciiDigit(int x) {
-  return 2;
+	int font_26 = !(x >> 6);
+	int middle_2 = ((0b110000 & x) + 0b10000) >> 6;
+	int bits_3_to_1 = !(((0b1110 & x) + 0b0110) >> 4);
+	return font_26 & middle_2 & bits_3_to_1;
 }
 /* 
  * conditional - same as x ? y : z 
@@ -209,7 +212,8 @@ int isAsciiDigit(int x) {
  *   Rating: 3
  */
 int conditional(int x, int y, int z) {
-  return 2;
+	int v = ~(!x) + 1;
+	return (~v & y) | (v & z);
 }
 /* 
  * isLessOrEqual - if x <= y  then return 1, else return 0 
@@ -218,8 +222,10 @@ int conditional(int x, int y, int z) {
  *   Max ops: 24
  *   Rating: 3
  */
-int isLessOrEqual(int x, int y) {
-  return 2;
+int isLessOrEqual(int x, int y) {   
+  	int x_31 = (x >> 31) + 1;
+   	int y_31 = (y >> 31) + 1;
+	return ((!x_31) & y_31) | (!(x_31 ^ y_31) & !(((x + ~y) >> 31) + 1));
 }
 //4
 /* 
@@ -231,7 +237,7 @@ int isLessOrEqual(int x, int y) {
  *   Rating: 4 
  */
 int logicalNeg(int x) {
-  return 2;
+	return ((((~x + 1) >> 31) ^ (x >> 31)) + 1) & ((x >> 31) + 1);
 }
 /* howManyBits - return the minimum number of bits required to represent x in
  *             two's complement
