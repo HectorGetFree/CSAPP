@@ -322,7 +322,33 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
-  return 2;
+	unsigned frac = (uf << 9) >> 9;
+	unsigned exp = (uf >> 23) & 0b11111111;
+	int sign = (uf >> 31) & 1;
+	if (exp == 0b11111111) {
+		// 超出范围
+		return 0x80000000u;
+	} else if (exp == 0){
+		// 非规格化
+		return 0u;
+	} else{
+		// 规格化
+		// 如果exp <= bias 直接截断位0
+		int e = exp - 0b01111111;
+		if (e > 53) {
+			return 0x80000000u;
+		} else if (e < 0) {
+			return 0u;
+		} else {
+			int result = 0;
+         if (e <= 23) {
+			   result = ((sign << 31) >> (30 - e)) + (1 << e);
+         } else {
+            result = ((sign << 31) >> (30 - e)) + (1 << e) + (frac << (e - 23));
+         }
+			return result;
+		}
+	}
 }
 /* 
  * floatPower2 - Return bit-level equivalent of the expression 2.0^x
