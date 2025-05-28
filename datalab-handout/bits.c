@@ -175,8 +175,8 @@ int isTmax(int x) {
  *   Rating: 2
  */
 int allOddBits(int x) {
-	int v = 0b10101010;
-	return (0b01010101 + ((v & x & (x >> 8) & (x >> 16) & (x >> 24)) + 1)) >> 8;
+	int v = 0xAA;
+	return (0x55 + ((v & x & (x >> 8) & (x >> 16) & (x >> 24)) + 1)) >> 8;
 }
 /* 
  * negate - return -x 
@@ -200,8 +200,8 @@ int negate(int x) {
  */
 int isAsciiDigit(int x) {
 	int font_26 = !(x >> 6);
-	int middle_2 = ((0b110000 & x) + 0b10000) >> 6;
-	int bits_3_to_1 = !(((0b1110 & x) + 0b0110) >> 4);
+	int middle_2 = ((0x30 & x) + 0x10) >> 6;
+	int bits_3_to_1 = !(((0xe & x) + 0x6) >> 4);
 	return font_26 & middle_2 & bits_3_to_1;
 }
 /* 
@@ -252,33 +252,31 @@ int logicalNeg(int x) {
  *  Rating: 4
  */
 int howManyBits(int x) {
-	int sign = x >> 31;
-	// 如果是负数就取反，正数就不变
-	// 最后将所得到的位数加上符号位这一位即可
-	x = x ^ sign;
-
-	int b16 = (!!(x >> 16)) << 4; // 如果高16位有1，那么就说明至少需要16位，没1结果就是0
-	x = x >> b16; // 如果至少需要16位，那我们只需要再判断高16位；如果不需要，那我们依旧判断低16位
-
-	// 下面同理
-	int b8 = (!!(x >> 8)) << 3;
-	x = x >> b8;
-
-	int b4 = (!!(x >> 4)) << 2;
-	x = x >> b4;
-
-	int b2 = (!!(x >> 2)) << 1;
-	x = x >> b2;
-
-	// 判断的是倒数两位
-	int b1 = (!!(x >> 1));
-	x = x >> b1;
-
-	// 判断的是最低位
-	int b0 = x;
-	
-	return b16 + b8 + b4 + b2 + b1 + b0 + 1;
+    int sign, b16, b8, b4, b2, b1, b0;
+    
+    sign = x >> 31;
+    x = x ^ sign;
+    
+    b16 = (!!(x >> 16)) << 4;
+    x = x >> b16;
+    
+    b8 = (!!(x >> 8)) << 3;
+    x = x >> b8;
+    
+    b4 = (!!(x >> 4)) << 2;
+    x = x >> b4;
+    
+    b2 = (!!(x >> 2)) << 1;
+    x = x >> b2;
+    
+    b1 = (!!(x >> 1));
+    x = x >> b1;
+    
+    b0 = x;
+    
+    return b16 + b8 + b4 + b2 + b1 + b0 + 1;
 }
+
 //float
 /* 
  * floatScale2 - Return bit-level equivalent of expression 2*f for
@@ -292,14 +290,15 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-	unsigned frac = (uf << 9) >> 9;
-	unsigned exp = (uf >> 23) & 0b11111111;
-	int sign = (uf >> 31) & 1;
-	unsigned result = 0;
+    unsigned frac, exp, sign, result;
+	frac = (uf << 9) >> 9;
+	exp = (uf >> 23) & 0xff;
+	sign = (uf >> 31) & 1;
+	result = 0;
 	// 非规格化--直接右移一位
 	if (exp == 0) {
 		result = (sign << 31) + (uf << 1);
-	} else if (exp == 0b11111111) {
+	} else if (exp == 0xff) {
 	// 无穷或者NaN
 		result = uf;
 	} else{
@@ -322,10 +321,11 @@ unsigned floatScale2(unsigned uf) {
  *   Rating: 4
  */
 int floatFloat2Int(unsigned uf) {
+    int e;
 	unsigned frac = (uf << 9) >> 9;
-	unsigned exp = (uf >> 23) & 0b11111111;
+	unsigned exp = (uf >> 23) & 0xff;
 	int sign = (uf >> 31) & 1;
-	if (exp == 0b11111111) {
+	if (exp == 0xff) {
 		// 超出范围
 		return 0x80000000u;
 	} else if (exp == 0){
@@ -334,7 +334,7 @@ int floatFloat2Int(unsigned uf) {
 	} else{
 		// 规格化
 		// 如果exp <= bias 直接截断位0
-		int e = exp - 0b01111111;
+		e = exp - 0x7f;
 		if (e > 53) {
 			return 0x80000000u;
 		} else if (e < 0) {
