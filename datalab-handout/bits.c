@@ -270,9 +270,11 @@ int howManyBits(int x) {
 	int b2 = (!!(x >> 2)) << 1;
 	x = x >> b2;
 
+	// 判断的是倒数两位
 	int b1 = (!!(x >> 1));
 	x = x >> b1;
 
+	// 判断的是最低位
 	int b0 = x;
 	
 	return b16 + b8 + b4 + b2 + b1 + b0 + 1;
@@ -290,7 +292,22 @@ int howManyBits(int x) {
  *   Rating: 4
  */
 unsigned floatScale2(unsigned uf) {
-  return 2;
+	unsigned frac = (uf << 9) >> 9;
+	unsigned exp = (uf >> 23) & 0b11111111;
+	int sign = (uf >> 31) & 1;
+	unsigned result = 0;
+	// 非规格化--直接右移一位
+	if (exp == 0) {
+		result = (sign << 31) + (uf << 1);
+	} else if (exp == 0b11111111) {
+	// 无穷或者NaN
+		result = uf;
+	} else{
+	// 规格化
+		exp = exp + 1;
+		result = (sign << 31) + (exp << 23) + frac;
+	}
+	return result;
 }
 /* 
  * floatFloat2Int - Return bit-level equivalent of expression (int) f
