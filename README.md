@@ -4,6 +4,8 @@
 
 ### data-lab
 
+注意⚠️：本lab中的C代码为`C90/C89`标准,所有变量声明必须放在函数或代码块的开头，且不能在代码中出现`0b`标识的二进制常数，否则尽管可以通过测试，但是`./dlc bits.c`规范会提示`parse error`或者变量名`undeclared`,此外也不要出现没有使用过的变量
+
 #### `int howManyBits(int x)`
 
 ```C
