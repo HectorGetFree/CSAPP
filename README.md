@@ -209,7 +209,7 @@ Phase_2其实不需要理解全部代码，特别是`read_six_numbers`中的代�
   400f56:	b8 00 00 00 00       	mov    $0x0,%eax
   400f5b:	e8 90 fc ff ff       	call   400bf0 <__isoc99_sscanf@plt>
   400f60:	83 f8 01             	cmp    $0x1,%eax 								#%eax中储存了scanf读取成功的个数
-  400f63:	7f 05                	jg     400f6a <phase_3+0x27>		#要求至少读入2个数
+  400f63:	7f 05                	jg     400f6a <phase_3+0x27>		#要求至少读入2个数(实测多输入几个数字也无所谓)
   400f65:	e8 d0 04 00 00       	call   40143a <explode_bomb>		#否则引爆
   400f6a:	83 7c 24 08 07       	cmpl   $0x7,0x8(%rsp)						#读进去的两个数分别位于%rsp+0x8的低4字节和高4字节
   400f6f:	77 3c                	ja     400fad <phase_3+0x6a>		#要求第一个数不能大于7，否则引爆
