@@ -450,11 +450,11 @@ Disassembly of section .text:
   40101f:	b8 00 00 00 00       	mov    $0x0,%eax
   401024:	e8 c7 fb ff ff       	call   400bf0 <__isoc99_sscanf@plt>
   401029:	83 f8 02             	cmp    $0x2,%eax
-  40102c:	75 07                	jne    401035 <phase_4+0x29>
-  40102e:	83 7c 24 08 0e       	cmpl   $0xe,0x8(%rsp)
-  401033:	76 05                	jbe    40103a <phase_4+0x2e>
+  40102c:	75 07                	jne    401035 <phase_4+0x29>   # 不等于2直接爆炸
+  40102e:	83 7c 24 08 0e       	cmpl   $0xe,0x8(%rsp)          # 将输入的第一个数字跟0xe比较
+  401033:	76 05                	jbe    40103a <phase_4+0x2e>   # 大于就炸
   401035:	e8 00 04 00 00       	call   40143a <explode_bomb>
-  40103a:	ba 0e 00 00 00       	mov    $0xe,%edx
+  40103a:	ba 0e 00 00 00       	mov    $0xe,%edx               
   40103f:	be 00 00 00 00       	mov    $0x0,%esi
   401044:	8b 7c 24 08          	mov    0x8(%rsp),%edi
   401048:	e8 81 ff ff ff       	call   400fce <func4>
