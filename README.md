@@ -246,3 +246,58 @@ Phase_2其实不需要理解全部代码，特别是`read_six_numbers`中的代�
 
 `cmp    0xc(%rsp),%eax`这里的0xc(%rsp)的低4个字节其实就是我们输入的第二个数
 
+### Phase_4
+
+主体逻辑很明显，输入两个数，经过func4运算结果应该为0，且第二个输入的数字也要为0
+
+```assembly
+000000000040100c <phase_4>:
+  40100c:	48 83 ec 18          	sub    $0x18,%rsp
+  401010:	48 8d 4c 24 0c       	lea    0xc(%rsp),%rcx
+  401015:	48 8d 54 24 08       	lea    0x8(%rsp),%rdx
+  40101a:	be cf 25 40 00       	mov    $0x4025cf,%esi
+  40101f:	b8 00 00 00 00       	mov    $0x0,%eax
+  401024:	e8 c7 fb ff ff       	call   400bf0 <__isoc99_sscanf@plt>
+  401029:	83 f8 02             	cmp    $0x2,%eax
+  40102c:	75 07                	jne    401035 <phase_4+0x29>   # 不等于2直接爆炸
+  40102e:	83 7c 24 08 0e       	cmpl   $0xe,0x8(%rsp)          # 将输入的第一个数字跟0xe比较
+  401033:	76 05                	jbe    40103a <phase_4+0x2e>   # 大于就炸
+  401035:	e8 00 04 00 00       	call   40143a <explode_bomb>
+  40103a:	ba 0e 00 00 00       	mov    $0xe,%edx               
+  40103f:	be 00 00 00 00       	mov    $0x0,%esi
+  401044:	8b 7c 24 08          	mov    0x8(%rsp),%edi
+  401048:	e8 81 ff ff ff       	call   400fce <func4>
+  40104d:	85 c0                	test   %eax,%eax
+  40104f:	75 07                	jne    401058 <phase_4+0x4c>
+  401051:	83 7c 24 0c 00       	cmpl   $0x0,0xc(%rsp)
+  401056:	74 05                	je     40105d <phase_4+0x51>
+  401058:	e8 dd 03 00 00       	call   40143a <explode_bomb>
+  40105d:	48 83 c4 18          	add    $0x18,%rsp
+  401061:	c3                   	ret
+```
+
+传入func的参数是14和0以及我们输入的第一个数
+
+我的做法是观察到当输入的一个数为7是func4正好返回0
+
+然后通过GPT得到C语言版本如下：
+
+```C
+int func4(int target, int low, int high) {
+    if (low > high) {
+        return 0;
+    }
+
+    int mid = (high - low) / 2 + low;
+
+    if (target < mid) {
+        return 2 * func4(target, low, mid - 1);
+    } else if (target > mid) {
+        return 2 * func4(target, mid + 1, high) + 1;
+    } else {
+        return 0;
+    }
+}
+```
+
+其实就是一个二分查找返回路径编码，只有当target为7是才会返回0
