@@ -316,5 +316,10 @@ int func4(int target, int low, int high) {
 
 Phase_6看了半天没做出来。汇编码读懂了一部分，理解了输入1-6 一共6个数字，然后用7去减，卡在了链表那里，死活没弄明白链表怎么构建的，所以这里就不放解析了，相关解析可以移步到[b站](https://www.bilibili.com/video/BV1vu411o7QP?t=0.6&p=7)
 
+## attacklab
 
+### Phase_1
 
+因为第一次做这样的lab所以做了参考，没有独立完成这一阶段的lab
+
+参考：[官方writeup](https://csapp.cs.cmu.edu/3e/attacklab.pdf) [arthals‘ink博客](https://arthals.ink/blog/attack-lab#phase-1)
