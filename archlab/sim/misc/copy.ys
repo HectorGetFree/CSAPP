@@ -1,0 +1,57 @@
+# long copy_block(long *src, long *dest, long len)
+# {
+#     long result = 0;
+#     while (len > 0) {
+# 	  long val = *src++;
+# 	  *dest++ = val;
+# 	  result ^= val;
+# 	  len--;
+#     }
+#     return result;
+# }
+
+    .pos 0
+    irmovq stack, %rsp
+    call main
+    halt
+
+    .align 8
+src:
+    .quad 0x00a
+    .quad 0x0b0
+    .quad 0xc00
+
+dest:
+    .quad 0x111
+    .quad 0x222
+    .quad 0x333
+
+main:
+    irmovq src, %rdi
+    irmovq dest, %rsi
+    irmovq 3, %rdx
+    call copy_block
+    ret
+
+copy_block:
+    irmovq 8, %r8
+    irmovq 1, %r9
+    xorq %rax, %rax
+test:
+    andq %rdx, %rdx
+    je done
+
+loop:
+    mrmovq (%rdi), %r10 # val = *src
+    addq %r8, %rdi # src++
+    rmmovq %r10, (%rsi) # *dest = val
+    addq %r8, %rsi # dest++
+    xorq %r10, %rax # result ^= val
+    subq %r9, %rdx 
+    jmp test
+
+done:
+    ret
+
+    .pos 0x200
+stack:
