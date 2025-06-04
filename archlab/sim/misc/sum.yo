@@ -1,0 +1,41 @@
+0x000:                      |     .pos 0
+0x000: 30f40002000000000000 |     irmovq stack, %rsp
+0x00a: 804800000000000000   |     call main
+0x013: 00                   |     halt
+                            | 
+                            | 
+0x018:                      |     .align 8
+0x018:                      | ele1:
+0x018: 0a00000000000000     |     .quad 0x00a
+0x020: 2800000000000000     |     .quad ele2
+0x028:                      | ele2:
+0x028: b000000000000000     |     .quad 0x0b0
+0x030: 3800000000000000     |     .quad ele3
+0x038:                      | ele3:
+0x038: 000c000000000000     |     .quad 0xc00
+0x040: 0000000000000000     |     .quad 0
+                            |     
+0x048:                      | main:
+0x048: 30f71800000000000000 |     irmovq ele1, %rdi
+0x052: 805c00000000000000   |     call list_sum
+0x05b: 90                   |     ret
+                            | 
+0x05c:                      | list_sum:
+0x05c: a05f                 |     pushq %rbp # 保存rbp
+0x05e: 6300                 |     xorq %rax, %rax # 清零
+0x060: 708800000000000000   |     jmp test
+                            | 
+0x069:                      | loop:
+0x069: 50670000000000000000 |     mrmovq (%rdi), %rsi 
+0x073: 6060                 |     addq %rsi, %rax
+0x075: 50770800000000000000 |     mrmovq 8(%rdi), %rdi
+0x07f: 708800000000000000   |     jmp test
+                            | 
+0x088:                      | test:
+0x088: 6277                 |     andq %rdi, %rdi
+0x08a: 746900000000000000   |     jne loop
+0x093: b05f                 |     popq %rbp
+0x095: 90                   |     ret
+                            | 
+0x200:                      |     .pos 0x200
+0x200:                      | stack:
