@@ -323,3 +323,7 @@ Phase_6看了半天没做出来。汇编码读懂了一部分，理解了输入1
 因为第一次做这样的lab所以做了参考，没有独立完成这一阶段的lab
 
 参考：[官方writeup](https://csapp.cs.cmu.edu/3e/attacklab.pdf) [arthals‘ink博客](https://arthals.ink/blog/attack-lab#phase-1)
+
+### Phase_2
+
+编写一个程序放在缓存区，程序需要对%rdi赋值然后跳转到`touch2()`，需要将它的地址压入栈然后返回即可跳转，另外利用缓存区溢出将原来的return地址替换为缓存区地址，这样就可以执行我们存在缓存区的程序了
