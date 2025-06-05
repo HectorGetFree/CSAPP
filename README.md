@@ -427,3 +427,92 @@ objdump -d ctarget > ctarget.asm
 
 篇幅有限，具体的还是参考[b站](【深入理解计算机系统 attacklab-哔哩哔哩】 https://b23.tv/WyDNvzY)，尤其是phase_5有些难度，指令跨度较大，寄存器较多
 
+## archlab
+
+这是一个有关Y86处理器架构的lab（来自课本的第4章），一共A,B,C三个部分，我只试着做了做前两个部分，最后一个部分不愿意做了，主要是因为感觉自己对汇编优化这块不太敏感，做这个没什么意思。但是还是梳理一下工作流
+
+### Part A
+
+先进入`sim/misc`目录执行`make`命令（注：我在make时遇到了变量重复定义的问题，我不知道如何解决，从而导致一些文件无法被make生成，目前的解决方法是：在`sim/misc/yis.h`中为`int lineno;`加上`extern`这样你可以`make`出partA需要的文件来进行测试，但是PartB我还没有解决）
+
+这一部分要求你写三个y86汇编程序
+
+`sum.ys`：对一个链表进行求和
+
+`rsum.ys`:`sum.ys`的递归版本
+
+`copy.ys`:将一个一个字块复制到内存中的另一个字块，应计算所有字块中值的校验和`xor`
+
+参考的C语言版本在`sim/misc/example.c`中
+
+大致的代码格式如下：
+
+```y86
+    .pos 0	# 位置指示符，用来指定接下来的代码或数据在内存中的绝对地址。
+    irmovq stack, %rsp	# 设置栈指针指向stack地址
+    call main	# 调用main函数
+    halt	# 程序结束
+
+
+    .align 8	# 字对齐
+ele1:	#链表
+    .quad 0x00a
+    .quad ele2
+ele2:
+    .quad 0x0b0
+    .quad ele3
+ele3:
+    .quad 0xc00
+    .quad 0
+    
+main:
+    irmovq ele1, %rdi
+    call list_sum
+    ret
+
+list_sum:
+    pushq %rbp # 保存rbp
+    xorq %rax, %rax # 清零
+    jmp test
+
+loop:
+    mrmovq (%rdi), %rsi 
+    addq %rsi, %rax
+    mrmovq 8(%rdi), %rdi
+    jmp test
+
+test:
+    andq %rdi, %rdi
+    jne loop
+    popq %rbp
+    ret
+
+    .pos 0x200 # 在内存地址 0x200 处定义标签 stack
+stack:	 # 栈底
+```
+
+执行`./yas xxx.ys && ./yis xxx.yo`命令即可得到输出，正确的输出如下
+
+```
+Stopped in 31 steps at PC = 0x13.  Status 'HLT', CC Z=1 S=0 O=0
+Changes to registers:
+%rax:   0x0000000000000000      0x0000000000000cba
+%rsp:   0x0000000000000000      0x0000000000000200
+%rsi:   0x0000000000000000      0x0000000000000c00
+
+Changes to memory:
+0x01f0: 0x0000000000000000      0x000000000000005b
+0x01f8: 0x0000000000000000      0x0000000000000013
+```
+
+看%rax即可判断是否得到正确的结果
+
+有关内存的就看下面半段，冒号前是地址，冒号后前半段是执行前的值，后半段是执行后的值
+
+### Part B
+
+在`sim/seq`目录下，查看`seq-full.hcl`根据注释判断你是否要把`iadd`填入相应的部分即可
+
+### Part C
+
+请参考 [博客](https://arthals.ink/blog/arch-lab#partc), 该博客也是我在做这个lab时的参考
