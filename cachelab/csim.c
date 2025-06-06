@@ -1,3 +1,5 @@
+#include <getopt.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
 
@@ -74,8 +76,81 @@ void caching(size_t address, int is_modified) {
     // 然后替换数据，也就是置换相应的tag
     cur_set[LRU_pos].tag = tag;
 }
-int main()
+int main(int argc, char* argv[])
 {
-    printSummary(0, 0, 0);
+    // 读取命令行参数
+    int option;
+    FILE* trace_file;
+    while ((option = getopt(argc, argv, "s:E:b:t:")) != -1) {
+        switch (option) {
+            case 's':
+                // 这些是#include <getopt.h>头文件里定义的：外部变量 optarg 指向当前选项参数的指针，atoi将字符串转换为整数
+                s = atoi(optarg);
+                break;
+            case 'E':
+                E = atoi(optarg);
+                break;
+            case 'b':
+                b = atoi(optarg);
+                break;
+            case 't':
+                trace_file = fopen(optarg, "r");
+                break;
+        }
+    }
+
+    // 校验参数
+    // if (s <= 0 || E <= 0 || b <= 0 || s + b > 64 || trace_file == NULL) {
+    //     print_usage();
+    //     exit(1);
+    // }
+
+    // 初始化缓存
+    // s 是 set index的bit数目
+    // cache中有2^s^个组
+    cache = (set *)malloc(sizeof(set) * (1 << s));
+    // 初始化组
+    for (int i = 0; i < (1 << s); i++) {
+        set cur_set = cache[i];
+        cur_set = (set)malloc(sizeof(struct line) * E);
+        // 初始化行
+        for (int j = 0; j < E; j++) {
+            cur_set[j].valid = -1;
+            cur_set[j].tag = -1;
+            cur_set->last_used_time = -1;
+        }
+    }
+
+    // 下面读文件，根据文件更新hit，miss和eviction
+    // 文件每一行的格式是
+    // operation address,size
+
+    // 储存读到的指令
+    char operation;
+    // 储存得到的地址
+    size_t address;
+    // 储存读到的size
+    int size;
+
+    while (fscanf(trace_file, "%s %ld,%d\n", &operation, &address, &size) == 3) {
+        // 每读一行就更新时间戳
+        timestamp++;
+        // 根据读到的指令操作来选择cache的行为
+        switch (operation) {
+            case 'I':
+                // 我们不对指令缓存做处理
+                continue;
+            case 'M': // Load + Store
+                // 修改操作
+                caching(address, 1);
+                break;
+            case 'L': // Load
+                case 'S': // Store
+                caching(address, 0);
+        }
+    }
+    // 程序结束，释放缓存
+    free(cache);
+    printSummary(hit, miss, eviction);
     return 0;
 }
