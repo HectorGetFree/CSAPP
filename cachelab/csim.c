@@ -1,8 +1,6 @@
 #include <getopt.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <time.h>
-
 #include "cachelab.h"
 // 定义一行的结构
 struct line {
@@ -16,9 +14,9 @@ typedef struct line* set;
 // 定义缓存，包含S个组
 set* cache;
 // 定义缓存全局变量，timestamp是我们维护的时间戳，用来执行LRU替换
-int v = 0, s, E, b, t, timestamp;
+int v = 0, s, E, b, t, timestamp = 0;
 // 定义需要返回的全局变量
-int hit = 0, miss = 0, eviction = 0;
+unsigned hit = 0, miss = 0, eviction = 0;
 
 // 模拟缓存
 // is_modified 是指这条代码是否是修改（写）指令
@@ -39,13 +37,11 @@ void caching(size_t address, int is_modify) {
 
     // 循环匹配相应的行
     for (int i = 0; i < E; i++) {
-        // 当前行
-        struct line cur_line = cur_set[i];
-        if (cur_line.tag == tag) {
+        if (cur_set[i].tag == tag) {
             hit++;
             hit += is_modify;
             // 更新当前行的LRU
-            cur_line.last_used_time = timestamp;
+            cur_set[i].last_used_time = timestamp;
             // 支持v选项
             if (v) {
                 printf("hit\n");
@@ -54,9 +50,9 @@ void caching(size_t address, int is_modify) {
             return;
         }
         // 更新LRU位置和时间
-        if (cur_line.last_used_time < LRU_time) {
+        if (cur_set[i].last_used_time < LRU_time) {
             LRU_pos = i;
-            LRU_time = cur_line.last_used_time;
+            LRU_time = cur_set[i].last_used_time;
         }
     }
     // 循环下来没有命中，miss++
@@ -140,6 +136,9 @@ int main(int argc, char* argv[])
             case 't':
                 trace_file = fopen(optarg, "r");
                 break;
+            default:
+                print_usage();
+                exit(0);
         }
     }
 
@@ -155,13 +154,12 @@ int main(int argc, char* argv[])
     cache = (set *)malloc(sizeof(set) * (1 << s));
     // 初始化组
     for (int i = 0; i < (1 << s); i++) {
-        set cur_set = cache[i];
-        cur_set = (set)malloc(sizeof(struct line) * E);
+        cache[i] = (set)malloc(sizeof(struct line) * E);
         // 初始化行
         for (int j = 0; j < E; j++) {
-            cur_set[j].valid = -1;
-            cur_set[j].tag = -1;
-            cur_set->last_used_time = -1;
+            cache[i][j].valid = -1;
+            cache[i][j].tag = -1;
+            cache[i][j].last_used_time = -1;
         }
     }
 
@@ -176,7 +174,7 @@ int main(int argc, char* argv[])
     // 储存读到的size
     int size;
 
-    while (fscanf(trace_file, "%s %ld,%d\n", &operation, &address, &size) == 3) {
+    while (fscanf(trace_file, "%s %lx,%d\n", &operation, &address, &size) == 3) {
         // 每读一行就更新时间戳
         timestamp++;
         if (v) {
