@@ -37,6 +37,8 @@ void caching(size_t address, int is_modify) {
 
     // 循环匹配相应的行
     for (int i = 0; i < E; i++) {
+        // 不要使用struct line cur_line = cur_set[i]；
+        // 因为是浅拷贝
         if (cur_set[i].tag == tag) {
             hit++;
             hit += is_modify;
