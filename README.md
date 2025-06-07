@@ -320,7 +320,7 @@ Phase_6看了半天没做出来。汇编码读懂了一部分，理解了输入1
 
 好吧，这个lab没能独立做出来，原因是对栈溢出和ROP理解不是很到位，也没有对`ret push pop`这些指令特别熟悉。总的来说就是对栈的行为都不太熟🙂‍↕️
 
-根据参考下来的文档[官方writeup](https://csapp.cs.cmu.edu/3e/attacklab.pdf)， [arthals‘ink博客](https://arthals.ink/blog/attack-lab#phase-1)，[b站](【深入理解计算机系统 attacklab-哔哩哔哩】 https://b23.tv/WyDNvzY)
+根据参考下来的文档[官方writeup](https://csapp.cs.cmu.edu/3e/attacklab.pdf)， [arthals‘ink博客](https://arthals.ink/blog/attack-lab#phase-1)，[b站](https://b23.tv/WyDNvzY)
 
 再梳理一下工作流吧
 
@@ -405,7 +405,7 @@ objdump -d ctarget > ctarget.asm
 
 但是我遇到了一个问题，也就是在确定答案前进行测试的时候，我遇到了段错误，也就是说我没有办法利用gdb观察缓存区域的变化，导致我没做出来。
 
-另一种思路：来自[b站](【深入理解计算机系统 attacklab-哔哩哔哩】 https://b23.tv/WyDNvzY) up主的评论：
+另一种思路：来自[b站]( https://b23.tv/WyDNvzY) up主的评论：
 
 ```
 回复 @雨随风来雨落去 :你看下hexmatch的代码，cbuf数组其实就是getbuf的栈帧，s字符串的起始地址是cbuf的首地址加上一个随机数对100求余剩下的余数，余数范围0到99，s字符串本身占用8字节，那么，cbuf数组可能0-107字节这个范围都可能被s字符串覆盖，只剩下最后两个字节是不会被覆盖的，但是我们要存的字符数组长8字节，剩下两个字节不够用，所以只能放到test的栈帧里了。
@@ -425,7 +425,7 @@ objdump -d ctarget > ctarget.asm
 - 在`<start_farm>`与`<end_farm>`间检索可以你需要的指令（也就是你可以取相关指令字节码的一部分来满足你的需求），注意要检索那些以`c3`结尾的字节码，记录下指令的地址
 - 然后填入输入字符串即可（注意小端，要倒着写）
 
-篇幅有限，具体的还是参考[b站](【深入理解计算机系统 attacklab-哔哩哔哩】 https://b23.tv/WyDNvzY)，尤其是phase_5有些难度，指令跨度较大，寄存器较多
+篇幅有限，具体的还是参考[b站](https://b23.tv/WyDNvzY)，尤其是phase_5有些难度，指令跨度较大，寄存器较多
 
 ## archlab
 
