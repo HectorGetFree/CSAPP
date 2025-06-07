@@ -1,0 +1,7 @@
+# 在 cachelab/.gitignore 中添加：
+
+*.o
+*.tar
+test-trans
+tracegen
+trace.*
