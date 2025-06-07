@@ -516,3 +516,9 @@ Changes to memory:
 ### Part C
 
 请参考 [博客](https://arthals.ink/blog/arch-lab#partc), 该博客也是我在做这个lab时的参考
+
+## cachelab
+
+Part-A要求模拟缓存，我对着参考一点一点把代码敲上去的，只能说完全看懂了，但是让我自己做还是有些困难，然后给每一步都添加了详尽的注释
+
+Part-B
