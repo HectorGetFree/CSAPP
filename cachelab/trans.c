@@ -154,7 +154,24 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
             }
         }
     }
+
+    if (M == 61) {
+         // 利用所给的拓展资料来进行分块求解
+        int bsize = 17;
+        for (int bi = 0; bi < N; bi += bsize) {
+            for (int bj = 0; bj < M; bj += bsize) {
+                for (int i = bi; i < N && i < bi + bsize; i++) {
+                    for (int j = bj; j < M && j < bj + bsize; j++) {
+                        int tmp = A[i][j];
+                        B[j][i] = tmp;
+                    }   
+                }
+            }
+        }
+    }
+   
 }
+
 
 /* 
  * You can define additional transpose functions below. We've defined
@@ -213,4 +230,3 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N])
     }
     return 1;
 }
-
