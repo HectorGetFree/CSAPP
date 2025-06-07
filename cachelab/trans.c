@@ -22,6 +22,8 @@ int is_transpose(int M, int N, int A[N][M], int B[M][N]);
 char transpose_submit_desc[] = "Transpose submission";
 void transpose_submit(int M, int N, int A[N][M], int B[M][N])
 {
+    // 由于从第二次读A开始，已经读到的B的相应行会被驱逐，所以会多很多miss
+    // 优化原理是先将数据全部加载进B然后在B内进行转置，这样就不用担心缓存问题了，因为B的全部数据都已经被加载
     int a, b, c, d, e, f, g, h;
     for (int i = 0; i < N; i += 8) {
         for (int j = 0; j < M; j+= 8) {
@@ -36,15 +38,23 @@ void transpose_submit(int M, int N, int A[N][M], int B[M][N])
                 g = A[i + k][j + 6];
                 h = A[i + k][j + 7];
 
-                // 按列写B
-                B[j][i + k] = a;
-                B[j + 1][i + k] = b;
-                B[j + 2][i + k] = c;
-                B[j + 3][i + k] = d;
-                B[j + 4][i + k] = e;
-                B[j + 5][i + k] = f;
-                B[j + 6][i + k] = g;
-                B[j + 7][i + k] = h;
+                // 按行写B
+                B[j + k][i + 0] = a;
+                B[j + k][i + 1] = b;
+                B[j + k][i + 2] = c;
+                B[j + k][i + 3] = d;
+                B[j + k][i + 4] = e;
+                B[j + k][i + 5] = f;
+                B[j + k][i + 6] = g;
+                B[j + k][i + 7] = h;
+            }
+            // 对B转置
+            for (int k = 0; k < 8; k++) {
+                for (int l = 0; l < k; l++) {
+                    a = B[j + k][i + l];
+                    B[j + k][i + l] = B[j + l][i + k];
+                    B[j + l][i + k] = a;
+                }
             }
         }
     }
