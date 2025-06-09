@@ -353,7 +353,59 @@ void waitfg(pid_t pid)
  */
 void sigchld_handler(int sig) 
 {
-    return;
+	int old_errno = errno;
+	int status;
+	int pid;
+	struct job_t* job;
+	sigset_t mask_all, mask_prev;
+	sigfillset(&mask_all);
+	sigprocmask(SIG_BLOCK, &mask_all, &mask_prev);
+	// 有一个子进程返回就执行，不必全部都返回
+	while ((pid = waitpid(-1, status, WNOHANG | WUNTRACED | WCONTINUED)) > 0) {
+		job = getjobpid(jobs, pid);
+
+		if (WIFEXITED(status)) {
+			// 说明是正常返回
+			// 阻塞变量，保护全局数据结构
+			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
+			deletejob(jobs, job);
+			sigprocmask(SIG_SETMASK, &mask_prev, NULL);
+		}
+
+		if (WIFSIGNALED(status)) {
+			// 说明是信号中断
+			// 打印终止信息
+			sio_put("Job [%d] (%d) terminated by signal %d\n", job->jid, pid, WTERMSIG(status));
+			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
+			// 删除
+			deletejob(jobs, job);
+			sigprocmask(SIG_SETMASK, &mask_prev, NULL);
+		}
+
+		if (WIFSTOPPED(status)) {
+			// 说明是信号暂停
+			// 直接更改状态即可
+			sio_put("Job [%d] (%d) stopped by signal %d\n", job->jid, pid, WSTOPSIG(status));
+			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
+			job->state = ST;
+			sigprocmask(SIG_SETMASK, &mask_prev, NULL);
+		}
+// 信号继续，且当前为暂停状态，则恢复且改为后端进行
+		if (WIFCONTINUED(status) && job->state == ST) {
+			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
+			job->state = BG;
+			sigprocmask(SIG_SETMASK, &mask_prev, NULL);
+		}
+	}
+
+	// 没有子进程返回且error不是ECHILD（即没有子进程了），也不是正常退出，报错
+	if (pid < 0 && errno != ECHILD) {
+		unix_error("waitpid error");
+	}
+	// 恢复 errno
+	errno = old_errno;
+
+	return;
 }
 
 /* 
