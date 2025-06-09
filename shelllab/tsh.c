@@ -294,6 +294,36 @@ int builtin_cmd(char **argv)
  */
 void do_bgfg(char **argv) 
 {
+	// 定义一个job结构
+	struct job_t *job;
+	// 下面我们根据命令行参数来获取jid或者pid进而得到job
+	// 通过jid获取job
+	pid_t jid;
+	pid_t pid;
+	if (argv[1][0] == '%') {
+		jid = atoi(argv[1] + 1);
+		job = getjobjid(jobs, jid);
+	} else {
+		// 根据pid获取job
+		pid = atoi(argv[1]);
+		job = getjobpid(jobs, pid);
+	}
+	// 因为job可能由pid或者jid找到
+	// 所以我们需要将所得到的job的pid重新赋值给pid变量
+	pid = job->pid;
+
+	// 先恢复这个被挂起的进程,让它继续执行
+	kill(pid, SIGCONT);
+	// 更改job状态
+	if (!strcmp(argv[0], "bg")) {
+		job->state = BG;
+		printf("[%d] (%d) %s\n", job->jid, job->pid, job->cmdline);
+	} else {
+		// 标记job状态为前台
+		job->state = FG;
+		// 安全等待这个job结束/暂停
+		waitfg(pid);
+	}
     return;
 }
 
@@ -302,6 +332,11 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
+	sigset_t mask_none;
+	sigemptyset(&mask_none);
+	while (pid == fgpid(jobs)) {
+		sigsuspend(&mask_none);
+	}
     return;
 }
 
