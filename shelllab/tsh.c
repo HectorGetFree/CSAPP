@@ -165,6 +165,47 @@ int main(int argc, char **argv)
 */
 void eval(char *cmdline) 
 {
+	sigset_t mask_all, mask_prev;
+	// sigprocmask 会修改当前进程的 信号屏蔽字。
+	// SIG_BLOCK 表示阻塞指定信号集中的所有信号（即 mask_all）。
+	// &mask_prev 是用来保存之前的信号屏蔽状态，以便日后可以还原。
+	sigfillset(&mask_all);
+	sigprocmask(SIG_BLOCK, &mask_all, &mask_prev);
+  	// 先解析命令行命令
+	// 创建argv数组
+	char *argv[MAXARGS];
+	char buf[MAXLINE];
+	int bg;
+	pid_t pid;
+
+	strcpy(cmdline, buf);
+    bg = parseline(cmdline, argv);
+	if (argv[0] == NULL) {
+		return; /* 忽略空行 */
+	}
+
+
+	if (!builtin_cmd(argv)) {
+		if ((pid = fork()) == 0) { /* 创建子进程 子进程尝试执行用户输入的命令，如果执行失败则输出错误信息。*/
+			if (execve(argv[0], argv, environ) < 0) {
+				printf("%s: Command not found.\n", argv[0]);
+				exit(0);
+			}
+		}
+
+		// 父进程等待fg子进程结束
+		addjob(jobs, pid, bg ? BG : FG, cmdline);
+		// 修改全局变量后恢复信号屏蔽状态
+		sigprocmask(SIG_SETMASK, &mask_prev, NULL);
+		if (!bg) {
+			// 同步，避免父进程与子进程的竟态
+			while (pid == fgpid(jobs)) {
+				sigsuspend(&mask_prev);
+		}
+		} else {
+			printf("%d %s", pid, cmdline);
+		}
+	}
     return;
 }
 
@@ -231,6 +272,20 @@ int parseline(const char *cmdline, char **argv)
  */
 int builtin_cmd(char **argv) 
 {
+	if (!strcmp(argv[0], "quit")) {
+		exit(0);
+	}
+	if (!strcmp(argv[0], "&")) {
+		return 1;
+	}
+	if (!strcmp(argv[0], "fg") || !strcmp(argv[0], "bg")) {
+		do_bgfg(argv);
+		return 1;
+	}
+	if (!strcmp(argv[0], "jobs")) {
+		listjobs(jobs);
+		return 1;
+	}
     return 0;     /* not a builtin command */
 }
 
