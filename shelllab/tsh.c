@@ -12,6 +12,7 @@
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <errno.h>
+#include "csapp.h"
 
 /* Misc manifest constants */
 #define MAXLINE    1024   /* max line size */
@@ -374,7 +375,7 @@ void sigchld_handler(int sig)
 		if (WIFSIGNALED(status)) {
 			// 说明是信号中断
 			// 打印终止信息
-			sio_put("Job [%d] (%d) terminated by signal %d\n", job->jid, pid, WTERMSIG(status));
+			// sio_put("Job [%d] (%d) terminated by signal %d\n", job->jid, pid, WTERMSIG(status));
 			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
 			// 删除
 			deletejob(jobs, pid);
@@ -384,7 +385,7 @@ void sigchld_handler(int sig)
 		if (WIFSTOPPED(status)) {
 			// 说明是信号暂停
 			// 直接更改状态即可
-			sio_put("Job [%d] (%d) stopped by signal %d\n", job->jid, pid, WSTOPSIG(status));
+			// sio_put("Job [%d] (%d) stopped by signal %d\n", job->jid, pid, WSTOPSIG(status));
 			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
 			job->state = ST;
 			sigprocmask(SIG_SETMASK, &mask_prev, NULL);
