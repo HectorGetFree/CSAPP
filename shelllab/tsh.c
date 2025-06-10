@@ -415,6 +415,13 @@ void sigchld_handler(int sig)
  */
 void sigint_handler(int sig) 
 {
+	// 直接获取pid然后更新状态即可
+	int old_errno = errno;
+	int pid = fgpid(jobs);
+	if (pid) {
+		kill(pid, SIGINT);
+	}
+	errno = old_errno;
     return;
 }
 
@@ -425,6 +432,12 @@ void sigint_handler(int sig)
  */
 void sigtstp_handler(int sig) 
 {
+	int old_errno = errno;
+	int pid = fgpid(jobs);
+	if (pid) {
+		kill(pid, SIGSTOP);
+	}
+	errno = old_errno;
     return;
 }
 
