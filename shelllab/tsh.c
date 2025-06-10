@@ -272,7 +272,7 @@ int parseline(const char *cmdline, char **argv)
  */
 int builtin_cmd(char **argv) 
 {
-	if (!strcmp(argv[0], "quit")) {
+	if (strcmp(argv[0], "quit") == 0) {
 		exit(0);
 	}
 	if (!strcmp(argv[0], "&")) {
@@ -337,7 +337,6 @@ void waitfg(pid_t pid)
 	while (pid == fgpid(jobs)) {
 		sigsuspend(&mask_none);
 	}
-    return;
 }
 
 /*****************
@@ -375,7 +374,7 @@ void sigchld_handler(int sig)
 		if (WIFSIGNALED(status)) {
 			// 说明是信号中断
 			// 打印终止信息
-			// sio_put("Job [%d] (%d) terminated by signal %d\n", job->jid, pid, WTERMSIG(status));
+			printf("Job [%d] (%d) terminated by signal %d\n", job->jid, pid, WTERMSIG(status));
 			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
 			// 删除
 			deletejob(jobs, pid);
@@ -385,7 +384,7 @@ void sigchld_handler(int sig)
 		if (WIFSTOPPED(status)) {
 			// 说明是信号暂停
 			// 直接更改状态即可
-			// sio_put("Job [%d] (%d) stopped by signal %d\n", job->jid, pid, WSTOPSIG(status));
+			printf("Job [%d] (%d) stopped by signal %d\n", job->jid, pid, WSTOPSIG(status));
 			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
 			job->state = ST;
 			sigprocmask(SIG_SETMASK, &mask_prev, NULL);
@@ -418,8 +417,9 @@ void sigint_handler(int sig)
 	// 直接获取pid然后更新状态即可
 	int old_errno = errno;
 	int pid = fgpid(jobs);
+	// 向以 pid 为进程组 ID（PGID） 的所有进程发送信号 sig。
 	if (pid) {
-		kill(pid, SIGINT);
+		kill(-pid, SIGINT);
 	}
 	errno = old_errno;
     return;
@@ -435,7 +435,7 @@ void sigtstp_handler(int sig)
 	int old_errno = errno;
 	int pid = fgpid(jobs);
 	if (pid) {
-		kill(pid, SIGSTOP);
+		kill(-pid, SIGSTOP);
 	}
 	errno = old_errno;
     return;
