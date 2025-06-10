@@ -174,11 +174,10 @@ void eval(char *cmdline)
   	// 先解析命令行命令
 	// 创建argv数组
 	char *argv[MAXARGS];
-	char buf[MAXLINE];
 	int bg;
 	pid_t pid;
 
-	strcpy(cmdline, buf);
+	strcpy(cmdline, sbuf);
     bg = parseline(cmdline, argv);
 	if (argv[0] == NULL) {
 		return; /* 忽略空行 */
@@ -361,14 +360,14 @@ void sigchld_handler(int sig)
 	sigfillset(&mask_all);
 	sigprocmask(SIG_BLOCK, &mask_all, &mask_prev);
 	// 有一个子进程返回就执行，不必全部都返回
-	while ((pid = waitpid(-1, status, WNOHANG | WUNTRACED | WCONTINUED)) > 0) {
+	while ((pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED)) > 0) {
 		job = getjobpid(jobs, pid);
 
 		if (WIFEXITED(status)) {
 			// 说明是正常返回
 			// 阻塞变量，保护全局数据结构
 			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
-			deletejob(jobs, job);
+			deletejob(jobs, pid);
 			sigprocmask(SIG_SETMASK, &mask_prev, NULL);
 		}
 
@@ -378,7 +377,7 @@ void sigchld_handler(int sig)
 			sio_put("Job [%d] (%d) terminated by signal %d\n", job->jid, pid, WTERMSIG(status));
 			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
 			// 删除
-			deletejob(jobs, job);
+			deletejob(jobs, pid);
 			sigprocmask(SIG_SETMASK, &mask_prev, NULL);
 		}
 
