@@ -164,49 +164,52 @@ int main(int argc, char **argv)
  * background children don't receive SIGINT (SIGTSTP) from the kernel
  * when we type ctrl-c (ctrl-z) at the keyboard.  
 */
-void eval(char *cmdline) 
-{
-	sigset_t mask_all, mask_prev;
-	// sigprocmask 会修改当前进程的 信号屏蔽字。
-	// SIG_BLOCK 表示阻塞指定信号集中的所有信号（即 mask_all）。
-	// &mask_prev 是用来保存之前的信号屏蔽状态，以便日后可以还原。
-	sigfillset(&mask_all);
-	sigprocmask(SIG_BLOCK, &mask_all, &mask_prev);
-  	// 先解析命令行命令
+void eval(char *cmdline) {
+	sigset_t mask;
+	// 先解析命令行命令
 	// 创建argv数组
 	char *argv[MAXARGS];
 	int bg;
 	pid_t pid;
 
 	strcpy(cmdline, sbuf);
-    bg = parseline(cmdline, argv);
+	bg = parseline(cmdline, argv);
 	if (argv[0] == NULL) {
 		return; /* 忽略空行 */
 	}
 
 
 	if (!builtin_cmd(argv)) {
-		if ((pid = fork()) == 0) { /* 创建子进程 子进程尝试执行用户输入的命令，如果执行失败则输出错误信息。*/
+		// sigprocmask 会修改当前进程的 信号屏蔽字。
+		// SIG_BLOCK 表示阻塞指定信号集中的所有信号（即 mask_all）。
+		// &mask_prev 是用来保存之前的信号屏蔽状态，以便日后可以还原。
+		sigemptyset(&mask);
+		sigaddset(&mask, SIGCHLD);
+		sigprocmask(SIG_BLOCK, &mask, NULL);
+		if ((pid = fork()) < 0) {
+			unix_error("forking error");
+		} else if (pid == 0) { /* 创建子进程 子进程尝试执行用户输入的命令，如果执行失败则输出错误信息。*/
+			sigprocmask(SIG_UNBLOCK, &mask, NULL);
+			setpgid(0, 0);
 			if (execve(argv[0], argv, environ) < 0) {
 				printf("%s: Command not found.\n", argv[0]);
-				exit(0);
+				exit(1);
+			}
+		} else {
+			if (!bg) {
+				addjob(jobs, pid, FG, cmdline);
+			} else {
+				addjob(jobs, pid, BG, cmdline);
+			}
+			sigprocmask(SIG_UNBLOCK, &mask, NULL);
+
+			if (!bg) {
+				waitfg(pid);
+			} else {
+				printf("[%d] {%d} %s", pid2jid(pid), pid, cmdline);
 			}
 		}
-
-		// 父进程等待fg子进程结束
-		addjob(jobs, pid, bg ? BG : FG, cmdline);
-		// 修改全局变量后恢复信号屏蔽状态
-		sigprocmask(SIG_SETMASK, &mask_prev, NULL);
-		if (!bg) {
-			// 同步，避免父进程与子进程的竟态
-			while (pid == fgpid(jobs)) {
-				sigsuspend(&mask_prev);
-		}
-		} else {
-			printf("%d %s", pid, cmdline);
-		}
 	}
-    return;
 }
 
 /* 
@@ -272,7 +275,7 @@ int parseline(const char *cmdline, char **argv)
  */
 int builtin_cmd(char **argv) 
 {
-	if (!strcmp(argv[0], "quit")) {
+	if (strcmp(argv[0], "quit") == 0) {
 		exit(0);
 	}
 	if (!strcmp(argv[0], "&")) {
@@ -300,20 +303,35 @@ void do_bgfg(char **argv)
 	// 通过jid获取job
 	pid_t jid;
 	pid_t pid;
+	if (argv[1] == NULL) {
+		printf("%s command requires PID or %%jobid argument\n", argv[0]);
+		return;
+	}
 	if (argv[1][0] == '%') {
 		jid = atoi(argv[1] + 1);
 		job = getjobjid(jobs, jid);
-	} else {
+		if (job == NULL) {
+			printf("%s: No such job\n", argv[1]);
+			return;
+		}
+	} else if (isdigit(argv[1][0])){
 		// 根据pid获取job
 		pid = atoi(argv[1]);
 		job = getjobpid(jobs, pid);
+		if (job == NULL) {
+			printf("(%d): No such process\n", pid);
+			return;
+		}
+	} else {
+		printf("%s: argument must be a PID or %%jobid\n", argv[0]);
+		return;
 	}
 	// 因为job可能由pid或者jid找到
 	// 所以我们需要将所得到的job的pid重新赋值给pid变量
 	pid = job->pid;
 
 	// 先恢复这个被挂起的进程,让它继续执行
-	kill(pid, SIGCONT);
+	kill(-pid, SIGCONT);
 	// 更改job状态
 	if (!strcmp(argv[0], "bg")) {
 		job->state = BG;
@@ -324,7 +342,6 @@ void do_bgfg(char **argv)
 		// 安全等待这个job结束/暂停
 		waitfg(pid);
 	}
-    return;
 }
 
 /* 
@@ -332,12 +349,13 @@ void do_bgfg(char **argv)
  */
 void waitfg(pid_t pid)
 {
-	sigset_t mask_none;
-	sigemptyset(&mask_none);
-	while (pid == fgpid(jobs)) {
-		sigsuspend(&mask_none);
+	struct job_t* job = getjobpid(jobs, pid);
+	if (job == NULL) {
+		return;
 	}
-    return;
+	while (pid == fgpid(jobs)) {
+		// sigsuspend(&mask_none);
+	}
 }
 
 /*****************
@@ -357,44 +375,32 @@ void sigchld_handler(int sig)
 	int status;
 	int pid;
 	struct job_t* job;
-	sigset_t mask_all, mask_prev;
-	sigfillset(&mask_all);
-	sigprocmask(SIG_BLOCK, &mask_all, &mask_prev);
 	// 有一个子进程返回就执行，不必全部都返回
 	while ((pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED)) > 0) {
 		job = getjobpid(jobs, pid);
 
 		if (WIFEXITED(status)) {
 			// 说明是正常返回
-			// 阻塞变量，保护全局数据结构
-			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
 			deletejob(jobs, pid);
-			sigprocmask(SIG_SETMASK, &mask_prev, NULL);
 		}
 
 		if (WIFSIGNALED(status)) {
 			// 说明是信号中断
 			// 打印终止信息
-			// sio_put("Job [%d] (%d) terminated by signal %d\n", job->jid, pid, WTERMSIG(status));
-			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
+			printf("Job [%d] (%d) terminated by signal %d\n", job->jid, pid, WTERMSIG(status));
 			// 删除
 			deletejob(jobs, pid);
-			sigprocmask(SIG_SETMASK, &mask_prev, NULL);
 		}
 
 		if (WIFSTOPPED(status)) {
 			// 说明是信号暂停
 			// 直接更改状态即可
-			// sio_put("Job [%d] (%d) stopped by signal %d\n", job->jid, pid, WSTOPSIG(status));
-			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
+			printf("Job [%d] (%d) stopped by signal %d\n", job->jid, pid, WSTOPSIG(status));
 			job->state = ST;
-			sigprocmask(SIG_SETMASK, &mask_prev, NULL);
 		}
 // 信号继续，且当前为暂停状态，则恢复且改为后端进行
 		if (WIFCONTINUED(status) && job->state == ST) {
-			sigprocmask(SIG_SETMASK, &mask_all, &mask_prev);
 			job->state = BG;
-			sigprocmask(SIG_SETMASK, &mask_prev, NULL);
 		}
 	}
 
@@ -417,12 +423,12 @@ void sigint_handler(int sig)
 {
 	// 直接获取pid然后更新状态即可
 	int old_errno = errno;
-	int pid = fgpid(jobs);
+	pid_t pid = fgpid(jobs);
+	// 向以 pid 为进程组 ID（PGID） 的所有进程发送信号 sig。
 	if (pid) {
-		kill(pid, SIGINT);
+		kill(-pid, sig);
 	}
 	errno = old_errno;
-    return;
 }
 
 /*
@@ -433,12 +439,11 @@ void sigint_handler(int sig)
 void sigtstp_handler(int sig) 
 {
 	int old_errno = errno;
-	int pid = fgpid(jobs);
+	pid_t pid = fgpid(jobs);
 	if (pid) {
-		kill(pid, SIGSTOP);
+		kill(-pid, sig);
 	}
 	errno = old_errno;
-    return;
 }
 
 /*********************
