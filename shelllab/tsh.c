@@ -354,7 +354,6 @@ void waitfg(pid_t pid)
 		return;
 	}
 	while (pid == fgpid(jobs)) {
-		// sigsuspend(&mask_none);
 	}
 }
 
