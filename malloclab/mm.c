@@ -44,11 +44,28 @@ team_t team = {
 
 #define SIZE_T_SIZE (ALIGN(sizeof(size_t)))
 
+// 自定义宏
+// 单字大小
+// 双字大小
+#define WSIZE 4
+#define DSIZE 5
+// 按照2^12=2KB（字节）拓展堆
+#define CHUNKSIZE (1 << 12)
+
+// 最大值和最小值
+#define MAX(x, y)        ((x) > (y) ? (x) : (y))
+#define MIN(x, y)        ((x) < (y) ? (x) : (y))
+
+// 利用有效负载为8的倍数，最低位存放标识位(ALLOC)
+#define PACK(size, alloc)    ((size) | (alloc))
+#define PAXK_ALL()
+
 /* 
  * mm_init - initialize the malloc package.
  */
 int mm_init(void)
 {
+
     return 0;
 }
 
