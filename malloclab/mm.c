@@ -172,14 +172,49 @@ int mm_init(void)
  */
 void *mm_malloc(size_t size)
 {
-    int newsize = ALIGN(size + SIZE_T_SIZE);
-    void *p = mem_sbrk(newsize);
-    if (p == (void *)-1)
-	return NULL;
-    else {
-        *(size_t *)p = size;
-        return (void *)((char *)p + SIZE_T_SIZE);
+    // 如果没有初始化堆，就进行初始化
+    if (heap_listp == 0) {
+        mm_init();
     }
+
+    // 处理无效请求
+    if (size == 0) {
+        return NULL;
+    }
+
+    // 调整块大小
+    size = adjust_alloc_size(size);
+    // 对齐后的size
+    size_t asize;
+
+    // 分配数应该为DSIZE的整数倍，且至少为2，这样可以保证对齐
+    if (size <= DSIZE) {
+        // 不足DSIZE时多给它一个DSIZE
+        // 这是为了存储头部和脚部（分别是一个WSIZE）
+        asize = 2 * DSIZE;
+    } else {
+        // 参照课本第二章向上取整算法，保证多一个WSIDE用于存储头部
+        // 考虑到分配块结构中首尾各有一个未知块
+        // 所以对于奇数个字长的请求可以节省一个WSIDE
+        asize = DSIZE * ((size + (WSIZE)+(DSIZE - 1)) / DSIZE);
+    }
+
+    // 搜索空闲链表
+    if ((bp = find_fit(asize)) != NULL) {
+        place(bp, asize);
+        return bp;
+    }
+
+    // 没有搜索到合适的空闲链表
+    // 那就开辟新空间
+    // 新空间的大小是CHUNKSIZE和asize中的最大值
+    size_t extend_size = MAX(CHUNKSIZE, asize);
+    if ((bp = extend_heap(extend_size)) == NULL) {
+        return NULL;
+    }
+    place(bp, asize);
+    return bp;
+
 }
 
 /*
