@@ -250,18 +250,37 @@ void mm_free(void *ptr)
  */
 void *mm_realloc(void *ptr, size_t size)
 {
-    void *oldptr = ptr;
-    void *newptr;
-    size_t copySize;
+    // 如果size为0
+    // 等同于free()
+    if (size == 0) {
+        mm_free(ptr);
+        return ptr;
+    }
+
+    // 如果ptr为NULL, size != 0
+    // 等同与malloc 
+    if (ptr == NULL) {
+        ptr = malloc(size);
+        return ptr;
+    }
+
+    // 重新找到一个空间
+    void* newptr = malloc(size);
     
-    newptr = mm_malloc(size);
-    if (newptr == NULL)
-      return NULL;
-    copySize = *(size_t *)((char *)oldptr - SIZE_T_SIZE);
-    if (size < copySize)
-      copySize = size;
-    memcpy(newptr, oldptr, copySize);
-    mm_free(oldptr);
+    // 如果分配失败
+    // 直接退出
+    if (newptr == NULL) {
+        return 0;
+    }
+
+    // 分配成功就进行数据拷贝
+    // 有可能产生数据截断
+    size_t old_size = GET_SIZE(HDRP(ptr));
+    old_size = MIN(old_size, size);
+    memcpy(newptr, ptr, old_size);
+
+    // 释放原来的空间
+    free(ptr);
     return newptr;
 }
 
