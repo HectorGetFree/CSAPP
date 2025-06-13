@@ -198,7 +198,8 @@ void *mm_malloc(size_t size)
         // 所以对于奇数个字长的请求可以节省一个WSIDE
         asize = DSIZE * ((size + (WSIZE)+(DSIZE - 1)) / DSIZE);
     }
-
+    // 用于存储新分配的地址
+    char* bp;
     // 搜索空闲链表
     if ((bp = find_fit(asize)) != NULL) {
         place(bp, asize);
@@ -222,6 +223,26 @@ void *mm_malloc(size_t size)
  */
 void mm_free(void *ptr)
 {
+    // 处理非法输入
+    if (ptr == NULL) {
+        return;
+    }
+    // 如果没有初始化
+    // 那就先初始化然后直接返回
+    if (heap_listp = 0) {
+        mm_init();
+        return;
+    }
+    // 获取块大小
+    size_t cur_size = GET_SIZE(HDRP(ptr));
+    // 获取前面块的分配状态
+    size_t prev_alloc = GET_PREV_ALLOC(HDRP(ptr));
+    // 设置头部和脚部
+    PUT(HDRP(ptr), PACK_ALL(cur_size, prev_alloc, 0));
+    PUT(FTRP(ptr), PACK_ALL(cur_size, prev_alloc, 0));
+
+    // 合并空闲块
+    coalesce(ptr, cur_size);
 }
 
 /*
