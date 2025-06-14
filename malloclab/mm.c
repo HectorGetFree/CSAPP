@@ -106,10 +106,10 @@ static char** free_lists;
 /* 检查函数用 */
 // 检查指针是否对其 8 字节
 #define CHECK_ALIGN(p)  (ALIGN(p) == (size_t)p)
-// 检查空闲链表节点是否符合当前链表（桶）的设置范围
-static inline void get_range(size_t index);
-static size_t low_range;
-static size_t high_range;
+// 检查空闲链表节点是否符合当前链表（桶）的设置范围 -- 标准的malloclab没有用到，这是北大ics的部分
+// static inline void get_range(size_t index);
+// static size_t low_range;
+// static size_t high_range;
 
 /* 辅助函数原型 */
 static inline void* extend_heap(size_t words);
