@@ -559,7 +559,7 @@ Changes to memory:
 
 长宽不等的矩阵应该是最实际的情况
 
-## Shelllab
+## shelllab
 
 参考：[b站郭郭wg](https://b23.tv/3KCTb48)
 
@@ -568,4 +568,14 @@ Changes to memory:
 这个lab的关键是你要清楚每个要实现的函数是干什么的，以及相关信号的处理`handler()`，还有bg fg处理的机制，如何等待正确等待fg（spin）以及对信号的阻塞以及复原`sigprocmask()`
 
 具体的实现逻辑我都加在代码注释了
+
+## malloclab
+
+参考：[Arthals’ ink](https://arthals.ink/blog/malloc-lab)
+
+考察对动态内存分配的理解，关键是要理解如何组织你的堆结构
+
+参考着博客做了下来，有关代码的理解都加在注释里了
+
+## proxylab
 
