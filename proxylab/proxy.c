@@ -34,7 +34,7 @@ int main(int argc, char **argv)
     signal(SIGPIPE, SIG_IGN);
 
     // 剩下的代码部分基本仿照课本p695,另外有一些修改
-    int listenfd, connfd;
+    int listenfd, * connfd;
     // char hostname[MAXLINE], port[MAXLINE];
     socklen_t clientlen;
     struct sockaddr_storage clientaddr;
@@ -52,13 +52,13 @@ int main(int argc, char **argv)
     // 初始化缓存
     init_cache();
     while(1) {
-        cilentlen = sizeof(clientaddr);
+        clientlen = sizeof(clientaddr);
         // 每次循环使用malloc从而实现基于线程的并发服务器
         // 不使用局部变量，因为局部变量会导致线程间共享同一块内存，从而导致竞争
         connfd = (int *)malloc(sizeof(int));
         *connfd = accept(listenfd, (SA *)&clientaddr, &clientlen);
         if (*connfd < 0) {
-            fprintf(stderr, "Accept Error: %s\n", stderror(errno));
+            fprintf(stderr, "Accept Error: %s\n", strerror(errno));
             continue;
         }
 
@@ -78,7 +78,7 @@ void *thread(void* vargp) {
     pthread_detach(pthread_self());
 
     // 将局部变量复制存储在线程栈，释放动态分配的参数，防止内存泄露
-    int connfd = *((int *)vargp);
+    int client_fd = *((int *)vargp);
     free(vargp);
 
     // 处理请求
@@ -91,7 +91,7 @@ void *thread(void* vargp) {
     // rio_readlineb()从缓冲区中读取一行数据
     // 处理遇到EOF或者读取出错的情况
     if (rio_readlineb(&client_rio, buf, MAXLINE) <= 0) {
-        fprintf(stderr, "Read request line error: %s\n", stderror(errno));
+        fprintf(stderr, "Read request line error: %s\n", strerror(errno));
         close(client_fd);
         return NULL;
     }
@@ -112,7 +112,7 @@ void *thread(void* vargp) {
     }
 
     // 关闭连接
-    close(connfd);
+    close(client_fd);
     return NULL;
 }
 
@@ -154,7 +154,7 @@ int parse_url(string url, url_t* url_info) {
     else {
         // 有端口号
         *port_start = '\0';
-        strcpy(url->info, host_start);
+        strcpy(url_info->host, host_start);
         *port_start = ':';
         *path_start = '\0';
         strcpy(url_info->port, port_start + 1);
@@ -226,7 +226,7 @@ void do_get(rio_t* client_rio_p, string url) {
         return;
     }
     // 解析url
-    ulr_t url_info;
+    url_t url_info;
     if (parse_url(url, &url_info) < 0) {
         fprintf(stderr, "Parse url error\n");
         return;
@@ -272,7 +272,7 @@ void do_get(rio_t* client_rio_p, string url) {
         }
         // 缓存到局部变量 file_cache 中， 供缓存使用
         if (resp_total + resp_current < MAX_OBJECT_SIZE) {
-            memcpy(file_cahce + resp_total, buf, resp_current);
+            memcpy(file_cache + resp_total, buf, resp_current);
         }
         resp_total += resp_current;
         // 发送给客户端
